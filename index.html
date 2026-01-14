@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SDR Virtual - Solicite uma Proposta</title>
+    <title>SDR Virtual - Qualificação de Leads</title>
     <style>
         * {
             margin: 0;
@@ -12,8 +12,8 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #1a2a6c 0%, #b21f1f 50%, #fdbb2d 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -26,7 +26,7 @@
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             padding: 40px;
-            max-width: 500px;
+            max-width: 550px;
             width: 100%;
         }
         
@@ -34,21 +34,23 @@
             color: #333;
             margin-bottom: 10px;
             font-size: 28px;
+            text-align: center;
         }
         
         .subtitle {
             color: #666;
             margin-bottom: 30px;
-            font-size: 14px;
+            font-size: 15px;
+            text-align: center;
         }
         
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
         
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             color: #333;
             font-weight: 600;
             font-size: 14px;
@@ -72,33 +74,31 @@
         
         textarea {
             resize: vertical;
-            min-height: 100px;
+            min-height: 80px;
         }
         
         button {
             width: 100%;
             padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #1a2a6c;
             color: white;
             border: none;
             border-radius: 8px;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s;
+            margin-top: 10px;
         }
         
         button:hover {
+            background: #b21f1f;
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-        
-        button:active {
-            transform: translateY(0);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         
         button:disabled {
-            opacity: 0.6;
+            background: #ccc;
             cursor: not-allowed;
         }
         
@@ -111,98 +111,90 @@
             font-weight: 600;
         }
         
-        .success-message {
-            background: #4caf50;
-            color: white;
-        }
-        
-        .error-message {
-            background: #f44336;
-            color: white;
-        }
-        
-        .required {
-            color: #f44336;
-        }
+        .success-message { background: #4caf50; color: white; }
+        .error-message { background: #f44336; color: white; }
 
+        /* Estilização da Qualificação */
         .qualification-result {
-            margin-top: 20px;
+            margin-top: 25px;
             padding: 20px;
-            background: #f5f5f5;
-            border-radius: 10px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
             display: none;
         }
 
         .qualification-result h3 {
             margin-bottom: 15px;
-            color: #333;
+            font-size: 18px;
+            color: #1a2a6c;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+        }
+
+        .score-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
         }
 
         .score-badge {
-            display: inline-block;
-            padding: 8px 16px;
+            padding: 8px 15px;
             border-radius: 20px;
-            font-weight: bold;
-            font-size: 18px;
-            margin: 10px 0;
+            font-weight: 800;
+            font-size: 14px;
+            text-transform: uppercase;
         }
 
-        .score-quente {
-            background: #ff6b6b;
-            color: white;
-        }
-
-        .score-morno {
-            background: #ffd93d;
-            color: #333;
-        }
-
-        .score-frio {
-            background: #6bceff;
-            color: white;
-        }
+        .score-quente { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .score-morno { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .score-frio { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
 
         .detail-item {
-            margin: 10px 0;
-            padding: 10px;
-            background: white;
-            border-radius: 5px;
+            margin: 12px 0;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #444;
         }
 
         .detail-item strong {
-            color: #667eea;
+            color: #333;
+            display: block;
+            margin-bottom: 4px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
+
+        .required { color: #f44336; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Solicite uma Proposta</h1>
-        <p class="subtitle">Preencha o formulário e nossa equipe entrará em contato</p>
+        <h1>🚀 SDR Virtual AI</h1>
+        <p class="subtitle">Análise inteligente de leads em tempo real</p>
         
         <form id="leadForm">
             <div class="form-group">
                 <label>Nome Completo <span class="required">*</span></label>
-                <input type="text" name="nome" required placeholder="João Silva">
+                <input type="text" name="nome" required placeholder="Ex: Maria Souza">
             </div>
             
             <div class="form-group">
                 <label>Email Corporativo <span class="required">*</span></label>
-                <input type="email" name="email" required placeholder="joao@empresa.com.br">
+                <input type="email" name="email" required placeholder="maria@empresa.com">
             </div>
-            
-            <div class="form-group">
-                <label>Empresa <span class="required">*</span></label>
-                <input type="text" name="empresa" required placeholder="Empresa LTDA">
-            </div>
-            
-            <div class="form-group">
-                <label>Cargo <span class="required">*</span></label>
-                <input type="text" name="cargo" required placeholder="Gerente de Marketing">
-            </div>
-            
-            <div class="form-group">
-                <label>Telefone com DDD <span class="required">*</span></label>
-                <input type="tel" name="telefone" required placeholder="(11) 98765-4321">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label>Empresa <span class="required">*</span></label>
+                    <input type="text" name="empresa" required placeholder="Nome da empresa">
+                </div>
+                <div class="form-group">
+                    <label>Cargo <span class="required">*</span></label>
+                    <input type="text" name="cargo" required placeholder="Ex: Diretora">
+                </div>
             </div>
             
             <div class="form-group">
@@ -218,58 +210,26 @@
             </div>
             
             <div class="form-group">
-                <label>Segmento <span class="required">*</span></label>
-                <select name="segmento" required>
-                    <option value="">Selecione...</option>
-                    <option value="Tecnologia">Tecnologia</option>
-                    <option value="E-commerce">E-commerce</option>
-                    <option value="Saúde">Saúde</option>
-                    <option value="Educação">Educação</option>
-                    <option value="Financeiro">Financeiro</option>
-                    <option value="Varejo">Varejo</option>
-                    <option value="Serviços">Serviços</option>
-                    <option value="Indústria">Indústria</option>
-                    <option value="Outro">Outro</option>
-                </select>
+                <label>Desafio de Marketing</label>
+                <textarea name="mensagem" placeholder="Como podemos ajudar o seu negócio hoje?"></textarea>
             </div>
             
-            <div class="form-group">
-                <label>Qual seu principal desafio de marketing?</label>
-                <textarea name="mensagem" placeholder="Ex: Precisamos gerar mais leads qualificados para nosso time de vendas..."></textarea>
-            </div>
+            <input type="hidden" name="origem_lead" value="Site_Demo">
+
+            <button type="submit" id="submitBtn">Analisar Lead com IA →</button>
             
-            <div class="form-group">
-                <label>Como conheceu nossa empresa?</label>
-                <select name="origem_lead">
-                    <option value="Google">Google</option>
-                    <option value="LinkedIn">LinkedIn</option>
-                    <option value="Instagram">Instagram</option>
-                    <option value="Indicação">Indicação</option>
-                    <option value="Outro">Outro</option>
-                </select>
-            </div>
-            
-            <button type="submit" id="submitBtn">
-                Enviar Solicitação →
-            </button>
-            
-            <div class="message success-message" id="successMsg">
-                ✅ Formulário enviado com sucesso! Nossa equipe analisará sua solicitação.
-            </div>
-            
-            <div class="message error-message" id="errorMsg">
-                ❌ Erro ao enviar. Por favor, tente novamente.
-            </div>
+            <div class="message success-message" id="successMsg">✅ Processado com sucesso!</div>
+            <div class="message error-message" id="errorMsg">❌ Erro na conexão com o servidor.</div>
 
             <div class="qualification-result" id="qualificationResult">
-                <h3>📊 Análise de Qualificação</h3>
+                <h3>📊 Relatório de Qualificação</h3>
                 <div id="qualificationContent"></div>
             </div>
         </form>
     </div>
     
     <script>
-        // IMPORTANTE: Cole aqui a URL do seu webhook do n8n
+        // SUBSTITUA ABAIXO PELA SUA URL DE PRODUÇÃO DO N8N
         const WEBHOOK_URL = 'https://carolinezolet.app.n8n.cloud/webhook/sdr-virtual';
         
         document.getElementById('leadForm').addEventListener('submit', async (e) => {
@@ -279,77 +239,72 @@
             const successMsg = document.getElementById('successMsg');
             const errorMsg = document.getElementById('errorMsg');
             const qualificationResult = document.getElementById('qualificationResult');
+            const qualificationContent = document.getElementById('qualificationContent');
             
-            // Esconde mensagens anteriores
             successMsg.style.display = 'none';
             errorMsg.style.display = 'none';
             qualificationResult.style.display = 'none';
             
-            // Desabilita botão
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Enviando...';
+            submitBtn.textContent = 'IA Analisando dados...';
             
-            // Coleta dados do formulário
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
-            
-            // Adiciona timestamp
-            data.data_envio = new Date().toISOString();
+            data.data_envio = new Date().toLocaleString('pt-BR');
             
             try {
                 const response = await fetch(WEBHOOK_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
                 
                 if (response.ok) {
                     const result = await response.json();
+                    const qual = Array.isArray(result) ? result[0] : (result.data || result);
                     
                     successMsg.style.display = 'block';
+                    
+                    // Lógica de cores da Badge
+                    let badgeClass = 'score-frio';
+                    if (qual.classificacao === 'QUENTE') badgeClass = 'score-quente';
+                    if (qual.classificacao === 'MORNO') badgeClass = 'score-morno';
+                    
+                    // Renderização Limpa (Sem colchetes)
+                    qualificationContent.innerHTML = `
+                        <div class="score-row">
+                            <span style="font-size: 24px; font-weight: 800; color: #333;">${qual.score}/100</span>
+                            <span class="score-badge ${badgeClass}">${qual.classificacao}</span>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <strong>Resumo da Análise</strong>
+                            ${qual.razao_score || qual.analise_fit || 'Análise concluída com sucesso.'}
+                        </div>
+
+                        ${qual.red_flags && qual.red_flags.length > 0 && qual.red_flags[0] !== "" ? `
+                        <div class="detail-item" style="color: #b21f1f;">
+                            <strong>Atenção (Red Flags)</strong>
+                            • ${Array.isArray(qual.red_flags) ? qual.red_flags.join('<br>• ') : qual.red_flags}
+                        </div>` : ''}
+
+                        ${qual.proximos_passos ? `
+                        <div class="detail-item">
+                            <strong>Sugestão de Próximos Passos</strong>
+                            • ${Array.isArray(qual.proximos_passos) ? qual.proximos_passos.join('<br>• ') : qual.proximos_passos}
+                        </div>` : ''}
+                    `;
+                    
+                    qualificationResult.style.display = 'block';
                     e.target.reset();
-                    
-                    // Mostra resultado da qualificação se disponível
-                    if (result.data) {
-                        const qual = result.data;
-                        let scoreClass = 'score-frio';
-                        if (qual.classificacao === 'QUENTE') scoreClass = 'score-quente';
-                        if (qual.classificacao === 'MORNO') scoreClass = 'score-morno';
-                        
-                        const content = `
-                            <div class="detail-item">
-                                <strong>Score:</strong> ${qual.score}/100
-                                <span class="score-badge ${scoreClass}">${qual.classificacao}</span>
-                            </div>
-                            <div class="detail-item">
-                                <strong>Análise:</strong><br>
-                                ${qual.analise_fit}
-                            </div>
-                            ${qual.proximos_passos ? `
-                            <div class="detail-item">
-                                <strong>Próximos Passos:</strong><br>
-                                ${qual.proximos_passos.join('<br>')}
-                            </div>
-                            ` : ''}
-                        `;
-                        
-                        document.getElementById('qualificationContent').innerHTML = content;
-                        qualificationResult.style.display = 'block';
-                    }
-                    
-                    // Scroll suave até a mensagem
-                    successMsg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 } else {
-                    throw new Error('Erro na resposta');
+                    throw new Error();
                 }
             } catch (error) {
-                console.error('Erro:', error);
                 errorMsg.style.display = 'block';
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Enviar Solicitação →';
+                submitBtn.textContent = 'Analisar Lead com IA →';
             }
         });
     </script>
