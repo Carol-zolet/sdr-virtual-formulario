@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SDR Virtual - Qualificação de Leads</title>
+    <title>SDR Virtual AI - Qualificação de Leads</title>
     <style>
         * {
             margin: 0;
@@ -68,8 +68,8 @@
         
         input:focus, select:focus, textarea:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #1a2a6c;
+            box-shadow: 0 0 0 3px rgba(26, 42, 108, 0.1);
         }
         
         textarea {
@@ -114,14 +114,14 @@
         .success-message { background: #4caf50; color: white; }
         .error-message { background: #f44336; color: white; }
 
-        /* Estilização da Qualificação */
         .qualification-result {
             margin-top: 25px;
-            padding: 20px;
+            padding: 25px;
             background: #f8f9fa;
             border-radius: 12px;
             border: 1px solid #dee2e6;
             display: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
         }
 
         .qualification-result h3 {
@@ -130,20 +130,21 @@
             color: #1a2a6c;
             border-bottom: 2px solid #eee;
             padding-bottom: 8px;
+            text-align: center;
         }
 
         .score-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .score-badge {
             padding: 8px 15px;
             border-radius: 20px;
             font-weight: 800;
-            font-size: 14px;
+            font-size: 13px;
             text-transform: uppercase;
         }
 
@@ -152,17 +153,17 @@
         .score-frio { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
 
         .detail-item {
-            margin: 12px 0;
+            margin: 15px 0;
             font-size: 14px;
-            line-height: 1.5;
+            line-height: 1.6;
             color: #444;
         }
 
         .detail-item strong {
             color: #333;
             display: block;
-            margin-bottom: 4px;
-            font-size: 13px;
+            margin-bottom: 5px;
+            font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -173,7 +174,7 @@
 <body>
     <div class="container">
         <h1>🚀 SDR Virtual AI</h1>
-        <p class="subtitle">Análise inteligente de leads em tempo real</p>
+        <p class="subtitle">Análise BANT inteligente em tempo real</p>
         
         <form id="leadForm">
             <div class="form-group">
@@ -214,22 +215,22 @@
                 <textarea name="mensagem" placeholder="Como podemos ajudar o seu negócio hoje?"></textarea>
             </div>
             
-            <input type="hidden" name="origem_lead" value="Site_Demo">
+            <input type="hidden" name="origem_lead" value="Portfolio_Demo">
 
             <button type="submit" id="submitBtn">Analisar Lead com IA →</button>
             
             <div class="message success-message" id="successMsg">✅ Processado com sucesso!</div>
-            <div class="message error-message" id="errorMsg">❌ Erro na conexão com o servidor.</div>
+            <div class="message error-message" id="errorMsg">❌ Erro na conexão. Verifique o workflow.</div>
 
             <div class="qualification-result" id="qualificationResult">
-                <h3>📊 Relatório de Qualificação</h3>
+                <h3>📊 Diagnóstico de Qualificação AI</h3>
                 <div id="qualificationContent"></div>
             </div>
         </form>
     </div>
     
     <script>
-        // SUBSTITUA ABAIXO PELA SUA URL DE PRODUÇÃO DO N8N
+        // --- SUBSTITUA PELA SUA URL DE PRODUÇÃO DO N8N ---
         const WEBHOOK_URL = 'https://carolinezolet.app.n8n.cloud/webhook/sdr-virtual';
         
         document.getElementById('leadForm').addEventListener('submit', async (e) => {
@@ -250,7 +251,7 @@
             
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
-            data.data_envio = new Date().toLocaleString('pt-BR');
+            data.data_envio = new Date().toISOString();
             
             try {
                 const response = await fetch(WEBHOOK_URL, {
@@ -264,39 +265,48 @@
                     const qual = Array.isArray(result) ? result[0] : (result.data || result);
                     
                     successMsg.style.display = 'block';
+
+                    // Função auxiliar para limpar listas enviadas como texto pelo n8n
+                    const parseList = (field) => {
+                        if (Array.isArray(field)) return field;
+                        try { return JSON.parse(field); } 
+                        catch (e) { return field ? [field] : []; }
+                    };
+
+                    const passos = parseList(qual.proximos_passos);
+                    const flags = parseList(qual.red_flags);
                     
-                    // Lógica de cores da Badge
                     let badgeClass = 'score-frio';
                     if (qual.classificacao === 'QUENTE') badgeClass = 'score-quente';
                     if (qual.classificacao === 'MORNO') badgeClass = 'score-morno';
                     
-                    // Renderização Limpa (Sem colchetes)
                     qualificationContent.innerHTML = `
                         <div class="score-row">
-                            <span style="font-size: 24px; font-weight: 800; color: #333;">${qual.score}/100</span>
+                            <span style="font-size: 26px; font-weight: 900; color: #1a2a6c;">${qual.score}/100</span>
                             <span class="score-badge ${badgeClass}">${qual.classificacao}</span>
                         </div>
                         
                         <div class="detail-item">
-                            <strong>Resumo da Análise</strong>
-                            ${qual.razao_score || qual.analise_fit || 'Análise concluída com sucesso.'}
+                            <strong>Razão do Score</strong>
+                            ${qual.razao_score || qual.analise_fit || 'Análise concluída.'}
                         </div>
 
-                        ${qual.red_flags && qual.red_flags.length > 0 && qual.red_flags[0] !== "" ? `
-                        <div class="detail-item" style="color: #b21f1f;">
-                            <strong>Atenção (Red Flags)</strong>
-                            • ${Array.isArray(qual.red_flags) ? qual.red_flags.join('<br>• ') : qual.red_flags}
+                        ${flags.length > 0 && flags[0] !== "" ? `
+                        <div class="detail-item" style="color: #b21f1f; background: #fff5f5; padding: 10px; border-radius: 8px;">
+                            <strong>⚠️ Pontos de Atenção (Red Flags)</strong>
+                            • ${flags.join('<br>• ')}
                         </div>` : ''}
 
-                        ${qual.proximos_passos ? `
+                        ${passos.length > 0 && passos[0] !== "" ? `
                         <div class="detail-item">
-                            <strong>Sugestão de Próximos Passos</strong>
-                            • ${Array.isArray(qual.proximos_passos) ? qual.proximos_passos.join('<br>• ') : qual.proximos_passos}
+                            <strong>🎯 Próximos Passos Sugeridos</strong>
+                            • ${passos.join('<br>• ')}
                         </div>` : ''}
                     `;
                     
                     qualificationResult.style.display = 'block';
                     e.target.reset();
+                    qualificationResult.scrollIntoView({ behavior: 'smooth' });
                 } else {
                     throw new Error();
                 }
