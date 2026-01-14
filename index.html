@@ -4,6 +4,235 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SDR Virtual AI - Qualificação de Leads</title>
+    
+    <!-- Google Tag Manager -->
+    <script>
+        
+        // ===== ANALYTICS / GTM =====
+        function trackEvent(eventName, eventParams = {}) {
+            // Google Analytics 4 / GTM
+            if (typeof gtag === 'function') {
+                gtag('event', eventName, eventParams);
+            }
+            
+            // Também enviar para dataLayer
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({
+                event: eventName,
+                ...eventParams
+            });
+            
+            console.log('📊 Event tracked:', eventName, eventParams);
+        }
+
+        // ===== MÁSCARA DE TELEFONE =====
+        function formatPhoneNumber(value) {
+            // Remove tudo que não é número
+            const numbers = value.replace(/\D/g, '');
+            
+            // Aplicar máscara brasileira
+            if (currentLang === 'pt') {
+                if (numbers.length <= 10) {
+                    return numbers.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+                } else {
+                    return numbers.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+                }
+            }
+            // Máscara internacional genérica
+            else {
+                return numbers.replace(/(\d{1,4})(\d{0,3})(\d{0,4})/, '+$1 ($2) $3');
+            }
+        }
+
+        document.getElementById('telefone')?.addEventListener('input', function(e) {
+            e.target.value = formatPhoneNumber(e.target.value);
+        });
+
+        // ===== AUTO-SAVE (RASCUNHO) =====
+        let autoSaveTimeout;
+
+        function autoSaveForm() {
+            if (!CONFIG.AUTO_SAVE_ENABLED) return;
+            
+            const formData = {
+                nome: document.getElementById('nome').value,
+                email: document.getElementById('email').value,
+                empresa: document.getElementById('empresa').value,
+                cargo: document.getElementById('cargo').value,
+                telefone: document.getElementById('telefone')?.value || '',
+                tamanho_empresa: document.getElementById('tamanho_empresa').value,
+                segmento: document.getElementById('segmento').value,
+                mensagem: document.getElementById('mensagem').value,
+                savedAt: new Date().toISOString()
+            };
+            
+            localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(formData));
+            
+            // Mostrar indicador
+            const indicator = document.getElementById('autoSaveIndicator');
+            indicator.classList.add('show');
+            setTimeout(() => indicator.classList.remove('show'), 2000);
+            
+            trackEvent('form_auto_saved');
+        }
+
+        function loadDraft() {
+            const draft = localStorage.getItem(CONFIG.STORAGE_KEY);
+            if (!draft) return;
+            
+            try {
+                const data = JSON.parse(draft);
+                
+                // Perguntar se quer recuperar
+                if (confirm(translations[currentLang].confirmLoadDraft || 'Deseja recuperar o rascunho salvo?')) {
+                    Object.keys(data).forEach(key => {
+                        const field = document.getElementById(key);
+                        if (field && key !== 'savedAt') {
+                            field.value = data[key];
+                        }
+                    });
+                    updateProgress();
+                    trackEvent('draft_loaded');
+                } else {
+                    localStorage.removeItem(CONFIG.STORAGE_KEY);
+                }
+            } catch (e) {
+                console.error('Erro ao carregar rascunho:', e);
+            }
+        }
+
+        // Auto-save com debounce
+        document.querySelectorAll('input, select, textarea').forEach(field => {
+            field.addEventListener('input', () => {
+                clearTimeout(autoSaveTimeout);
+                autoSaveTimeout = setTimeout(autoSaveForm, CONFIG.AUTO_SAVE_DELAY);
+            });
+        });
+
+        // Carregar rascunho ao iniciar
+        window.addEventListener('DOMContentLoaded', loadDraft);
+
+        // ===== INTEGRAÇÃO COM CRM =====
+        async function sendToCRM(leadData, qualificationData) {
+            const promises = [];
+            
+            // HubSpot
+            if (CONFIG.CRM.HUBSPOT_API_KEY) {
+                promises.push(sendToHubSpot(leadData, qualificationData));
+            }
+            
+            // Pipedrive
+            if (CONFIG.CRM.PIPEDRIVE_API_TOKEN) {
+                promises.push(sendToPipedrive(leadData, qualificationData));
+            }
+            
+            // RD Station
+            if (CONFIG.CRM.RD_STATION_TOKEN) {
+                promises.push(sendToRDStation(leadData, qualificationData));
+            }
+            
+            try {
+                await Promise.all(promises);
+                trackEvent('crm_sync_success', { 
+                    crms: promises.length,
+                    score: qualificationData.score 
+                });
+            } catch (error) {
+                console.error('Erro ao sincronizar com CRM:', error);
+                trackEvent('crm_sync_error', { error: error.message });
+            }
+        }
+
+        async function sendToHubSpot(lead, qualification) {
+            const endpoint = 'https://api.hubapi.com/crm/v3/objects/contacts';
+            
+            const payload = {
+                properties: {
+                    email: lead.email,
+                    firstname: lead.nome.split(' ')[0],
+                    lastname: lead.nome.split(' ').slice(1).join(' '),
+                    company: lead.empresa,
+                    jobtitle: lead.cargo,
+                    phone: lead.telefone,
+                    lead_score: qualification.score,
+                    lead_status: qualification.classificacao,
+                    hs_lead_status: qualification.classificacao === 'QUENTE' ? 'OPEN' : 'NEW'
+                }
+            };
+            
+            return fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${CONFIG.CRM.HUBSPOT_API_KEY}`
+                },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        async function sendToPipedrive(lead, qualification) {
+            const endpoint = `https://api.pipedrive.com/v1/persons?api_token=${CONFIG.CRM.PIPEDRIVE_API_TOKEN}`;
+            
+            const payload = {
+                name: lead.nome,
+                email: [{ value: lead.email, primary: true }],
+                phone: [{ value: lead.telefone, primary: true }],
+                org_id: null, // Você pode criar a empresa primeiro
+                'custom_lead_score': qualification.score,
+                'custom_lead_status': qualification.classificacao
+            };
+            
+            return fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        async function sendToRDStation(lead, qualification) {
+            const endpoint = 'https://api.rd.services/platform/conversions';
+            
+            const payload = {
+                event_type: 'CONVERSION',
+                event_family: 'CDP',
+                payload: {
+                    conversion_identifier: 'sdr-virtual-qualification',
+                    email: lead.email,
+                    name: lead.nome,
+                    company_name: lead.empresa,
+                    job_title: lead.cargo,
+                    mobile_phone: lead.telefone,
+                    cf_lead_score: qualification.score,
+                    cf_lead_status: qualification.classificacao,
+                    tags: [`score_${qualification.score}`, qualification.classificacao.toLowerCase()]
+                }
+            };
+            
+            return fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${CONFIG.CRM.RD_STATION_TOKEN}`
+                },
+                body: JSON.stringify(payload)
+            });
+        }window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        
+        // Configure seu GTM ID aqui
+        const GTM_ID = 'GTM-XXXXXXX'; // Substitua pelo seu ID
+        
+        // Inicializar GTM (descomente quando tiver o ID real)
+        /*
+        (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+        })(window,document,'script','dataLayer',GTM_ID);
+        */
+    </script>
+    <!-- End Google Tag Manager -->
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -24,12 +253,32 @@
             padding: 40px;
             max-width: 550px;
             width: 100%;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
-        h1 { color: #333; margin-bottom: 10px; font-size: 28px; text-align: center; }
-        .subtitle { color: #666; margin-bottom: 30px; font-size: 15px; text-align: center; }
+        h1 { 
+            color: #333; 
+            margin-bottom: 10px; 
+            font-size: 28px; 
+            text-align: center;
+        }
         
-        .form-group { margin-bottom: 18px; }
+        .subtitle { 
+            color: #666; 
+            margin-bottom: 30px; 
+            font-size: 15px; 
+            text-align: center; 
+        }
+        
+        .form-group { 
+            margin-bottom: 18px;
+            position: relative;
+        }
         
         label {
             display: block;
@@ -48,11 +297,54 @@
             transition: all 0.3s;
             font-family: inherit;
         }
+
+        input.error, select.error, textarea.error {
+            border-color: #f44336;
+            animation: shake 0.3s;
+        }
+
+        input.success, select.success {
+            border-color: #4caf50;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
         
         input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: #1a2a6c;
             box-shadow: 0 0 0 3px rgba(26, 42, 108, 0.1);
+        }
+        
+        .field-error {
+            color: #f44336;
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .field-error.show {
+            display: block;
+        }
+
+        .field-success {
+            color: #4caf50;
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .field-success.show {
+            display: block;
         }
         
         textarea { resize: vertical; min-height: 80px; }
@@ -69,6 +361,26 @@
             cursor: pointer;
             transition: all 0.3s;
             margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        button:hover::before {
+            width: 300px;
+            height: 300px;
         }
         
         button:hover {
@@ -77,11 +389,53 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         
-        button:disabled { background: #ccc; cursor: not-allowed; }
+        button:disabled { 
+            background: #ccc; 
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
         
-        .message { display: none; padding: 15px; border-radius: 8px; margin-top: 20px; text-align: center; font-weight: 600; }
-        .success-message { background: #4caf50; color: white; }
-        .error-message { background: #f44336; color: white; }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transform: translateX(400px);
+            transition: transform 0.3s ease-out;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 350px;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success { background: #4caf50; }
+        .toast.error { background: #f44336; }
+        .toast.warning { background: #ff9800; }
 
         .qualification-result {
             margin-top: 25px;
@@ -90,114 +444,734 @@
             border-radius: 12px;
             border: 1px solid #dee2e6;
             display: none;
+            animation: slideDown 0.5s ease-out;
         }
 
-        .score-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-        .score-badge { padding: 8px 15px; border-radius: 20px; font-weight: 800; font-size: 13px; text-transform: uppercase; }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .score-row { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            margin-bottom: 20px; 
+        }
+        
+        .score-badge { 
+            padding: 8px 15px; 
+            border-radius: 20px; 
+            font-weight: 800; 
+            font-size: 13px; 
+            text-transform: uppercase;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
         .score-quente { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .score-morno { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .score-frio { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
 
-        .detail-item { margin: 15px 0; font-size: 14px; line-height: 1.6; }
-        .detail-item strong { color: #333; display: block; margin-bottom: 5px; font-size: 12px; text-transform: uppercase; }
+        .detail-item { 
+            margin: 15px 0; 
+            font-size: 14px; 
+            line-height: 1.6; 
+        }
+        
+        .detail-item strong { 
+            color: #333; 
+            display: block; 
+            margin-bottom: 5px; 
+            font-size: 12px; 
+            text-transform: uppercase; 
+        }
+        
         .required { color: #f44336; }
+
+        .char-counter {
+            font-size: 12px;
+            color: #999;
+            text-align: right;
+            margin-top: 4px;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1a2a6c, #b21f1f);
+            width: 0;
+            transition: width 0.3s;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+            margin-left: 5px;
+        }
+
+        .tooltip::after {
+            content: '?';
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background: #666;
+            color: white;
+            border-radius: 50%;
+            font-size: 11px;
+            line-height: 16px;
+            text-align: center;
+        }
+
+        .tooltip:hover::before {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 12px;
+            background: #333;
+            color: white;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .language-switcher {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 8px;
+            background: white;
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .lang-btn {
+            padding: 6px 12px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .lang-btn.active {
+            background: #1a2a6c;
+            color: white;
+            border-color: #1a2a6c;
+        }
+
+        .lang-btn:hover:not(.active) {
+            border-color: #1a2a6c;
+        }
+
+        .auto-save-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #4caf50;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .auto-save-indicator.show {
+            opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+            .language-switcher {
+                top: 10px;
+                right: 10px;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+
+    <div class="language-switcher">
+        <button class="lang-btn active" data-lang="pt" onclick="switchLanguage('pt')">🇧🇷 PT</button>
+        <button class="lang-btn" data-lang="en" onclick="switchLanguage('en')">🇺🇸 EN</button>
+        <button class="lang-btn" data-lang="es" onclick="switchLanguage('es')">🇪🇸 ES</button>
+    </div>
+
+    <div class="auto-save-indicator" id="autoSaveIndicator">
+        💾 <span data-i18n="autoSaved">Rascunho salvo automaticamente</span>
+    </div>
+
     <div class="container">
-        <h1>🚀 SDR Virtual AI</h1>
-        <p class="subtitle">Qualificação inteligente com acessibilidade digital</p>
+        <h1 data-i18n="title">🚀 SDR Virtual AI</h1>
+        <p class="subtitle" data-i18n="subtitle">Qualificação inteligente de leads em tempo real</p>
         
-        <form id="leadForm">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressBar"></div>
+        </div>
+
+        <form id="leadForm" novalidate>
             <div class="form-group">
-                <label for="nome">Nome Completo <span class="required" aria-hidden="true">*</span></label>
-                <input type="text" id="nome" name="nome" required placeholder="Ex: Maria Souza" aria-required="true">
+                <label for="nome"><span data-i18n="labelName">Nome Completo</span> <span class="required" aria-hidden="true">*</span></label>
+                <input type="text" id="nome" name="nome" required data-i18n-placeholder="placeholderName" placeholder="Ex: Maria Souza" aria-required="true" autocomplete="name">
+                <div class="field-error" id="nomeError"></div>
+                <div class="field-success" id="nomeSuccess" data-i18n="validName">✓ Nome válido</div>
             </div>
             
             <div class="form-group">
-                <label for="email">Email Corporativo <span class="required" aria-hidden="true">*</span></label>
-                <input type="email" id="email" name="email" required placeholder="maria@empresa.com" aria-required="true">
+                <label for="email">
+                    <span data-i18n="labelEmail">Email Corporativo</span> <span class="required" aria-hidden="true">*</span>
+                    <span class="tooltip" data-i18n-tip="tipEmail" data-tip="Use apenas emails corporativos (não Gmail, Hotmail, etc)"></span>
+                </label>
+                <input type="email" id="email" name="email" required data-i18n-placeholder="placeholderEmail" placeholder="maria@empresa.com.br" aria-required="true" autocomplete="email">
+                <div class="field-error" id="emailError"></div>
+                <div class="field-success" id="emailSuccess" data-i18n="validEmail">✓ Email corporativo válido</div>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div class="form-group">
-                    <label for="empresa">Empresa <span class="required" aria-hidden="true">*</span></label>
-                    <input type="text" id="empresa" name="empresa" required placeholder="Nome da empresa" aria-required="true">
+                    <label for="empresa"><span data-i18n="labelCompany">Empresa</span> <span class="required" aria-hidden="true">*</span></label>
+                    <input type="text" id="empresa" name="empresa" required data-i18n-placeholder="placeholderCompany" placeholder="Nome da empresa" aria-required="true" autocomplete="organization">
+                    <div class="field-error" id="empresaError"></div>
                 </div>
                 <div class="form-group">
-                    <label for="cargo">Cargo <span class="required" aria-hidden="true">*</span></label>
-                    <input type="text" id="cargo" name="cargo" required placeholder="Ex: Diretora" aria-required="true">
+                    <label for="cargo"><span data-i18n="labelPosition">Cargo</span> <span class="required" aria-hidden="true">*</span></label>
+                    <input type="text" id="cargo" name="cargo" required data-i18n-placeholder="placeholderPosition" placeholder="Ex: Diretora" aria-required="true" autocomplete="organization-title">
+                    <div class="field-error" id="cargoError"></div>
                 </div>
             </div>
+
+            <div class="form-group">
+                <label for="telefone"><span data-i18n="labelPhone">Telefone</span> <span class="required" aria-hidden="true">*</span></label>
+                <input type="tel" id="telefone" name="telefone" required data-i18n-placeholder="placeholderPhone" placeholder="(11) 99999-9999" aria-required="true" autocomplete="tel">
+                <div class="field-error" id="telefoneError"></div>
+            </div>
             
             <div class="form-group">
-                <label for="tamanho_empresa">Tamanho da Empresa <span class="required" aria-hidden="true">*</span></label>
+                <label for="tamanho_empresa"><span data-i18n="labelSize">Tamanho da Empresa</span> <span class="required" aria-hidden="true">*</span></label>
                 <select id="tamanho_empresa" name="tamanho_empresa" required aria-label="Selecione o número de funcionários da empresa" aria-required="true">
-                    <option value="">Selecione...</option>
-                    <option value="1-10">1-10 funcionários</option>
-                    <option value="11-50">11-50 funcionários</option>
-                    <option value="51-200">51-200 funcionários</option>
-                    <option value="201-500">201-500 funcionários</option>
-                    <option value="500+">Mais de 500 funcionários</option>
+                    <option value="" data-i18n="selectOption">Selecione...</option>
+                    <option value="1-10" data-i18n="size1">1-10 funcionários</option>
+                    <option value="11-50" data-i18n="size2">11-50 funcionários</option>
+                    <option value="51-200" data-i18n="size3">51-200 funcionários</option>
+                    <option value="201-500" data-i18n="size4">201-500 funcionários</option>
+                    <option value="500+" data-i18n="size5">Mais de 500 funcionários</option>
                 </select>
+                <div class="field-error" id="tamanhoError"></div>
             </div>
 
             <div class="form-group">
-                <label for="segmento">Segmento <span class="required" aria-hidden="true">*</span></label>
+                <label for="segmento"><span data-i18n="labelSegment">Segmento</span> <span class="required" aria-hidden="true">*</span></label>
                 <select id="segmento" name="segmento" required aria-label="Selecione o segmento de atuação da empresa" aria-required="true">
-                    <option value="">Selecione...</option>
-                    <option value="Tecnologia">Tecnologia</option>
-                    <option value="E-commerce">E-commerce</option>
-                    <option value="Saúde">Saúde</option>
-                    <option value="Educação">Educação</option>
-                    <option value="Financeiro">Financeiro</option>
-                    <option value="Varejo">Varejo</option>
-                    <option value="Serviços">Serviços</option>
-                    <option value="Indústria">Indústria</option>
-                    <option value="Outro">Outro</option>
+                    <option value="" data-i18n="selectOption">Selecione...</option>
+                    <option value="Tecnologia" data-i18n="segTech">Tecnologia</option>
+                    <option value="E-commerce" data-i18n="segEcommerce">E-commerce</option>
+                    <option value="Saúde" data-i18n="segHealth">Saúde</option>
+                    <option value="Educação" data-i18n="segEducation">Educação</option>
+                    <option value="Financeiro" data-i18n="segFinance">Financeiro</option>
+                    <option value="Varejo" data-i18n="segRetail">Varejo</option>
+                    <option value="Serviços" data-i18n="segServices">Serviços</option>
+                    <option value="Indústria" data-i18n="segIndustry">Indústria</option>
+                    <option value="Outro" data-i18n="segOther">Outro</option>
                 </select>
+                <div class="field-error" id="segmentoError"></div>
             </div>
             
             <div class="form-group">
-                <label for="mensagem">Desafio de Marketing</label>
-                <textarea id="mensagem" name="mensagem" placeholder="Como podemos ajudar o seu negócio hoje?" aria-label="Descreva seu desafio de marketing"></textarea>
+                <label for="mensagem"><span data-i18n="labelMessage">Desafio de Marketing</span></label>
+                <textarea id="mensagem" name="mensagem" data-i18n-placeholder="placeholderMessage" placeholder="Como podemos ajudar o seu negócio hoje?" aria-label="Descreva seu desafio de marketing" maxlength="500"></textarea>
+                <div class="char-counter"><span id="charCount">0</span>/500 <span data-i18n="characters">caracteres</span></div>
             </div>
             
-            <input type="hidden" name="origem_lead" value="Demo_Acessivel">
+            <input type="hidden" name="origem_lead" value="Demo_MultiLang_CRM_2025">
 
-            <button type="submit" id="submitBtn">Analisar Lead com IA →</button>
-            
-            <div class="message success-message" id="successMsg" role="alert">✅ Processado com sucesso!</div>
-            <div class="message error-message" id="errorMsg" role="alert">❌ Erro na conexão. Verifique o workflow.</div>
+            <button type="submit" id="submitBtn">
+                <span id="btnText" data-i18n="btnSubmit">Analisar Lead com IA →</span>
+            </button>
 
             <div class="qualification-result" id="qualificationResult" aria-live="polite">
-                <h2 style="font-size: 18px; margin-bottom: 15px; color: #1a2a6c; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 8px;">📊 Relatório de Qualificação AI</h2>
+                <h2 style="font-size: 18px; margin-bottom: 15px; color: #1a2a6c; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 8px;" data-i18n="reportTitle">📊 Relatório de Qualificação AI</h2>
                 <div id="qualificationContent"></div>
             </div>
         </form>
     </div>
     
     <script>
-        const WEBHOOK_URL = 'https://carolinezolet.app.n8n.cloud/webhook/sdr-virtual';
+        // ===== CONFIGURAÇÕES =====
+        const CONFIG = {
+            WEBHOOK_URL: 'https://carolinezolet.app.n8n.cloud/webhook/sdr-virtual',
+            
+            // Configurações de CRM (adicione suas credenciais)
+            CRM: {
+                HUBSPOT_API_KEY: '', // Adicione sua chave da HubSpot
+                PIPEDRIVE_API_TOKEN: '', // Adicione seu token do Pipedrive
+                SALESFORCE_ENDPOINT: '', // Adicione endpoint do Salesforce
+                RD_STATION_TOKEN: '' // Adicione token da RD Station
+            },
+            
+            // Auto-save configurações
+            AUTO_SAVE_ENABLED: true,
+            AUTO_SAVE_DELAY: 2000, // 2 segundos após parar de digitar
+            STORAGE_KEY: 'sdr_lead_draft'
+        };
+
+        // ===== TRADUÇÕES =====
+        const translations = {
+            pt: {
+                title: '🚀 SDR Virtual AI',
+                subtitle: 'Qualificação inteligente de leads em tempo real',
+                labelName: 'Nome Completo',
+                labelEmail: 'Email Corporativo',
+                labelCompany: 'Empresa',
+                labelPosition: 'Cargo',
+                labelPhone: 'Telefone',
+                labelSize: 'Tamanho da Empresa',
+                labelSegment: 'Segmento',
+                labelMessage: 'Desafio de Marketing',
+                placeholderName: 'Ex: Maria Souza',
+                placeholderEmail: 'maria@empresa.com.br',
+                placeholderCompany: 'Nome da empresa',
+                placeholderPosition: 'Ex: Diretora',
+                placeholderPhone: '(11) 99999-9999',
+                placeholderMessage: 'Como podemos ajudar o seu negócio hoje?',
+                tipEmail: 'Use apenas emails corporativos (não Gmail, Hotmail, etc)',
+                validName: '✓ Nome válido',
+                validEmail: '✓ Email corporativo válido',
+                selectOption: 'Selecione...',
+                size1: '1-10 funcionários',
+                size2: '11-50 funcionários',
+                size3: '51-200 funcionários',
+                size4: '201-500 funcionários',
+                size5: 'Mais de 500 funcionários',
+                segTech: 'Tecnologia',
+                segEcommerce: 'E-commerce',
+                segHealth: 'Saúde',
+                segEducation: 'Educação',
+                segFinance: 'Financeiro',
+                segRetail: 'Varejo',
+                segServices: 'Serviços',
+                segIndustry: 'Indústria',
+                segOther: 'Outro',
+                characters: 'caracteres',
+                btnSubmit: 'Analisar Lead com IA →',
+                reportTitle: '📊 Relatório de Qualificação AI',
+                autoSaved: 'Rascunho salvo automaticamente',
+                errorShortName: 'Nome muito curto',
+                errorFullName: 'Digite seu nome completo',
+                errorOnlyLetters: 'Use apenas letras',
+                errorInvalidEmail: 'Email inválido',
+                errorCorporateEmail: 'Por favor, use um email corporativo',
+                errorRequired: 'Campo obrigatório',
+                errorSelectOption: 'Selecione uma opção',
+                errorInvalidPhone: 'Telefone inválido',
+                toastErrors: 'Por favor, corrija os erros no formulário',
+                toastSuccess: 'Lead qualificado com sucesso!',
+                toastConnectionError: 'Erro de conexão. Verifique sua internet.',
+                toastWebhookError: 'Webhook não encontrado. Verifique a URL.',
+                toastGenericError: 'Erro ao processar. Tente novamente.',
+                analyzing: 'IA Analisando dados...'
+            },
+            en: {
+                title: '🚀 AI Virtual SDR',
+                subtitle: 'Intelligent lead qualification in real-time',
+                labelName: 'Full Name',
+                labelEmail: 'Corporate Email',
+                labelCompany: 'Company',
+                labelPosition: 'Position',
+                labelPhone: 'Phone',
+                labelSize: 'Company Size',
+                labelSegment: 'Industry',
+                labelMessage: 'Marketing Challenge',
+                placeholderName: 'e.g., John Smith',
+                placeholderEmail: 'john@company.com',
+                placeholderCompany: 'Company name',
+                placeholderPosition: 'e.g., Director',
+                placeholderPhone: '+1 (555) 999-9999',
+                placeholderMessage: 'How can we help your business today?',
+                tipEmail: 'Use only corporate emails (not Gmail, Hotmail, etc)',
+                validName: '✓ Valid name',
+                validEmail: '✓ Valid corporate email',
+                selectOption: 'Select...',
+                size1: '1-10 employees',
+                size2: '11-50 employees',
+                size3: '51-200 employees',
+                size4: '201-500 employees',
+                size5: 'More than 500 employees',
+                segTech: 'Technology',
+                segEcommerce: 'E-commerce',
+                segHealth: 'Healthcare',
+                segEducation: 'Education',
+                segFinance: 'Finance',
+                segRetail: 'Retail',
+                segServices: 'Services',
+                segIndustry: 'Industry',
+                segOther: 'Other',
+                characters: 'characters',
+                btnSubmit: 'Analyze Lead with AI →',
+                reportTitle: '📊 AI Qualification Report',
+                autoSaved: 'Draft saved automatically',
+                errorShortName: 'Name too short',
+                errorFullName: 'Enter your full name',
+                errorOnlyLetters: 'Use only letters',
+                errorInvalidEmail: 'Invalid email',
+                errorCorporateEmail: 'Please use a corporate email',
+                errorRequired: 'Required field',
+                errorSelectOption: 'Select an option',
+                errorInvalidPhone: 'Invalid phone number',
+                toastErrors: 'Please correct the errors in the form',
+                toastSuccess: 'Lead qualified successfully!',
+                toastConnectionError: 'Connection error. Check your internet.',
+                toastWebhookError: 'Webhook not found. Check the URL.',
+                toastGenericError: 'Processing error. Try again.',
+                analyzing: 'AI Analyzing data...'
+            },
+            es: {
+                title: '🚀 SDR Virtual con IA',
+                subtitle: 'Calificación inteligente de leads en tiempo real',
+                labelName: 'Nombre Completo',
+                labelEmail: 'Email Corporativo',
+                labelCompany: 'Empresa',
+                labelPosition: 'Cargo',
+                labelPhone: 'Teléfono',
+                labelSize: 'Tamaño de la Empresa',
+                labelSegment: 'Segmento',
+                labelMessage: 'Desafío de Marketing',
+                placeholderName: 'ej: María González',
+                placeholderEmail: 'maria@empresa.com',
+                placeholderCompany: 'Nombre de la empresa',
+                placeholderPosition: 'ej: Directora',
+                placeholderPhone: '+34 999 999 999',
+                placeholderMessage: '¿Cómo podemos ayudar a su negocio hoy?',
+                tipEmail: 'Use solo emails corporativos (no Gmail, Hotmail, etc)',
+                validName: '✓ Nombre válido',
+                validEmail: '✓ Email corporativo válido',
+                selectOption: 'Seleccione...',
+                size1: '1-10 empleados',
+                size2: '11-50 empleados',
+                size3: '51-200 empleados',
+                size4: '201-500 empleados',
+                size5: 'Más de 500 empleados',
+                segTech: 'Tecnología',
+                segEcommerce: 'E-commerce',
+                segHealth: 'Salud',
+                segEducation: 'Educación',
+                segFinance: 'Financiero',
+                segRetail: 'Retail',
+                segServices: 'Servicios',
+                segIndustry: 'Industria',
+                segOther: 'Otro',
+                characters: 'caracteres',
+                btnSubmit: 'Analizar Lead con IA →',
+                reportTitle: '📊 Informe de Calificación IA',
+                autoSaved: 'Borrador guardado automáticamente',
+                errorShortName: 'Nombre muy corto',
+                errorFullName: 'Ingrese su nombre completo',
+                errorOnlyLetters: 'Use solo letras',
+                errorInvalidEmail: 'Email inválido',
+                errorCorporateEmail: 'Por favor, use un email corporativo',
+                errorRequired: 'Campo obligatorio',
+                errorSelectOption: 'Seleccione una opción',
+                errorInvalidPhone: 'Teléfono inválido',
+                toastErrors: 'Por favor, corrija los errores en el formulario',
+                toastSuccess: '¡Lead calificado con éxito!',
+                toastConnectionError: 'Error de conexión. Verifique su internet.',
+                toastWebhookError: 'Webhook no encontrado. Verifique la URL.',
+                toastGenericError: 'Error al procesar. Intente nuevamente.',
+                analyzing: 'IA Analizando datos...'
+            }
+        };
+
+        let currentLang = 'pt';
+
+        // ===== MULTI-IDIOMA =====
+        function switchLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('preferred_language', lang);
+            
+            // Atualizar botões
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === lang);
+            });
+            
+            // Atualizar textos
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.dataset.i18n;
+                if (translations[lang][key]) {
+                    el.textContent = translations[lang][key];
+                }
+            });
+            
+            // Atualizar placeholders
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.dataset.i18nPlaceholder;
+                if (translations[lang][key]) {
+                    el.placeholder = translations[lang][key];
+                }
+            });
+            
+            // Atualizar tooltips
+            document.querySelectorAll('[data-i18n-tip]').forEach(el => {
+                const key = el.dataset.i18nTip;
+                if (translations[lang][key]) {
+                    el.dataset.tip = translations[lang][key];
+                }
+            });
+
+            // Rastrear mudança de idioma
+            trackEvent('language_changed', { language: lang });
+        }
+
+        // Carregar idioma preferido
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedLang = localStorage.getItem('preferred_language') || 'pt';
+            if (savedLang !== 'pt') switchLanguage(savedLang);
+        });
         
+        // Lista de domínios de email pessoal bloqueados
+        const BLOCKED_DOMAINS = [
+            'gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'live.com',
+            'icloud.com', 'aol.com', 'protonmail.com', 'mail.com', 'zoho.com',
+            'uol.com.br', 'bol.com.br', 'terra.com.br', 'ig.com.br', 'globo.com'
+        ];
+
+        // Utilitário para mostrar toast
+        function showToast(message, type = 'success') {
+            const existingToast = document.querySelector('.toast');
+            if (existingToast) existingToast.remove();
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${type === 'success' ? '✓' : type === 'error' ? '✕' : '⚠'}</span>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Validação de email corporativo
+        function validateCorporateEmail(email) {
+            const domain = email.split('@')[1]?.toLowerCase();
+            if (!domain) return { valid: false, message: translations[currentLang].errorInvalidEmail };
+            if (BLOCKED_DOMAINS.includes(domain)) {
+                return { valid: false, message: translations[currentLang].errorCorporateEmail };
+            }
+            return { valid: true, message: '' };
+        }
+
+        // Validação de nome completo
+        function validateFullName(name) {
+            const trimmed = name.trim();
+            if (trimmed.length < 3) return { valid: false, message: translations[currentLang].errorShortName };
+            if (!/\s/.test(trimmed)) return { valid: false, message: translations[currentLang].errorFullName };
+            if (!/^[a-záàâãéèêíïóôõöúçñ\s]+$/i.test(trimmed)) {
+                return { valid: false, message: translations[currentLang].errorOnlyLetters };
+            }
+            return { valid: true, message: '' };
+        }
+
+        // Validação de telefone
+        function validatePhone(phone) {
+            const numbers = phone.replace(/\D/g, '');
+            if (numbers.length < 10) {
+                return { valid: false, message: translations[currentLang].errorInvalidPhone };
+            }
+            return { valid: true, message: '' };
+        }
+
+        // Função para mostrar erro em campo
+        function showFieldError(fieldId, message) {
+            const field = document.getElementById(fieldId);
+            const errorEl = document.getElementById(`${fieldId}Error`);
+            const successEl = document.getElementById(`${fieldId}Success`);
+            
+            field.classList.add('error');
+            field.classList.remove('success');
+            if (errorEl) {
+                errorEl.textContent = message;
+                errorEl.classList.add('show');
+            }
+            if (successEl) successEl.classList.remove('show');
+        }
+
+        // Função para mostrar sucesso em campo
+        function showFieldSuccess(fieldId) {
+            const field = document.getElementById(fieldId);
+            const errorEl = document.getElementById(`${fieldId}Error`);
+            const successEl = document.getElementById(`${fieldId}Success`);
+            
+            field.classList.remove('error');
+            field.classList.add('success');
+            if (errorEl) errorEl.classList.remove('show');
+            if (successEl) successEl.classList.add('show');
+        }
+
+        // Limpar erro em campo
+        function clearFieldError(fieldId) {
+            const field = document.getElementById(fieldId);
+            const errorEl = document.getElementById(`${fieldId}Error`);
+            const successEl = document.getElementById(`${fieldId}Success`);
+            
+            field.classList.remove('error', 'success');
+            if (errorEl) errorEl.classList.remove('show');
+            if (successEl) successEl.classList.remove('show');
+        }
+
+        // Atualizar barra de progresso
+        function updateProgress() {
+            const fields = ['nome', 'email', 'empresa', 'cargo', 'telefone', 'tamanho_empresa', 'segmento'];
+            const filled = fields.filter(id => {
+                const el = document.getElementById(id);
+                return el && el.value.trim() !== '';
+            }).length;
+            const progress = (filled / fields.length) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+            
+            // Rastrear progresso
+            if (progress === 100) {
+                trackEvent('form_completed');
+            }
+        }
+
+        // Validação em tempo real
+        document.getElementById('nome').addEventListener('blur', function() {
+            const validation = validateFullName(this.value);
+            if (!validation.valid && this.value.trim()) {
+                showFieldError('nome', validation.message);
+                trackEvent('field_error', { field: 'nome', error: validation.message });
+            } else if (validation.valid) {
+                showFieldSuccess('nome');
+            }
+        });
+
+        document.getElementById('email').addEventListener('blur', function() {
+            const validation = validateCorporateEmail(this.value);
+            if (!validation.valid && this.value.trim()) {
+                showFieldError('email', validation.message);
+                trackEvent('field_error', { field: 'email', error: validation.message });
+            } else if (validation.valid) {
+                showFieldSuccess('email');
+            }
+        });
+
+        document.getElementById('telefone')?.addEventListener('blur', function() {
+            const validation = validatePhone(this.value);
+            if (!validation.valid && this.value.trim()) {
+                showFieldError('telefone', validation.message);
+            }
+        });
+
+        // Contador de caracteres
+        document.getElementById('mensagem').addEventListener('input', function() {
+            document.getElementById('charCount').textContent = this.value.length;
+        });
+
+        // Atualizar progresso em todos os campos
+        ['nome', 'email', 'empresa', 'cargo', 'telefone', 'tamanho_empresa', 'segmento'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', updateProgress);
+        });
+
+        // Limpar erros ao digitar
+        document.querySelectorAll('input, select, textarea').forEach(field => {
+            field.addEventListener('input', function() {
+                if (this.id) clearFieldError(this.id);
+            });
+        });
+
+        // Submit do formulário
         document.getElementById('leadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const submitBtn = document.getElementById('submitBtn');
-            const successMsg = document.getElementById('successMsg');
-            const errorMsg = document.getElementById('errorMsg');
+            const btnText = document.getElementById('btnText');
             const qualificationResult = document.getElementById('qualificationResult');
             const qualificationContent = document.getElementById('qualificationContent');
             
-            successMsg.style.display = 'none';
-            errorMsg.style.display = 'none';
+            // Validações antes de enviar
+            let hasErrors = false;
+
+            const nomeValidation = validateFullName(document.getElementById('nome').value);
+            if (!nomeValidation.valid) {
+                showFieldError('nome', nomeValidation.message);
+                hasErrors = true;
+            }
+
+            const emailValidation = validateCorporateEmail(document.getElementById('email').value);
+            if (!emailValidation.valid) {
+                showFieldError('email', emailValidation.message);
+                hasErrors = true;
+            }
+
+            if (!document.getElementById('empresa').value.trim()) {
+                showFieldError('empresa', 'Campo obrigatório');
+                hasErrors = true;
+            }
+
+            if (!document.getElementById('cargo').value.trim()) {
+                showFieldError('cargo', 'Campo obrigatório');
+                hasErrors = true;
+            }
+
+            if (!document.getElementById('tamanho_empresa').value) {
+                showFieldError('tamanho_empresa', 'Selecione uma opção');
+                hasErrors = true;
+            }
+
+            if (!document.getElementById('segmento').value) {
+                showFieldError('segmento', 'Selecione uma opção');
+                hasErrors = true;
+            }
+
+            if (hasErrors) {
+                showToast('Por favor, corrija os erros no formulário', 'error');
+                return;
+            }
+            
             qualificationResult.style.display = 'none';
             
             submitBtn.disabled = true;
-            submitBtn.textContent = 'IA Analisando dados...';
+            btnText.innerHTML = '<span class="spinner"></span>IA Analisando dados...';
             
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
+            
+            // Sanitização dos dados
+            Object.keys(data).forEach(key => {
+                if (typeof data[key] === 'string') {
+                    data[key] = data[key].trim();
+                }
+            });
+            
             data.data_envio = new Date().toISOString();
             
             try {
@@ -211,7 +1185,7 @@
                     const result = await response.json();
                     const qual = Array.isArray(result) ? result[0] : (result.data || result);
                     
-                    successMsg.style.display = 'block';
+                    showToast('Lead qualificado com sucesso!', 'success');
 
                     const parseList = (field) => {
                         if (Array.isArray(field)) return field;
@@ -232,8 +1206,8 @@
                             <span class="score-badge ${badgeClass}">${qual.classificacao}</span>
                         </div>
                         <div class="detail-item">
-                            <strong>Razão do Score</strong>
-                            ${qual.razao_score || qual.analise_fit || 'Análise concluída.'}
+                            <strong>Diagnóstico Estratégico</strong>
+                            ${qual.razao_score || qual.analise_fit || 'Análise concluída com sucesso.'}
                         </div>
                         ${flags.length > 0 && flags[0] !== "" ? `
                         <div class="detail-item" style="color: #b21f1f; background: #fff5f5; padding: 10px; border-radius: 8px;">
@@ -242,19 +1216,34 @@
                         </div>` : ''}
                         ${passos.length > 0 && passos[0] !== "" ? `
                         <div class="detail-item">
-                            <strong>🎯 Próximos Passos Sugeridos</strong>
+                            <strong>🎯 Próximos Passos Recomendados</strong>
                             • ${passos.join('<br>• ')}
                         </div>` : ''}
                     `;
                     
                     qualificationResult.style.display = 'block';
                     e.target.reset();
-                } else { throw new Error(); }
+                    document.getElementById('charCount').textContent = '0';
+                    document.getElementById('progressBar').style.width = '0';
+                    
+                    setTimeout(() => {
+                        qualificationResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }, 100);
+                } else {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
             } catch (error) {
-                errorMsg.style.display = 'block';
+                console.error('Erro:', error);
+                if (error.message.includes('Failed to fetch')) {
+                    showToast('Erro de conexão. Verifique sua internet.', 'error');
+                } else if (error.message.includes('404')) {
+                    showToast('Webhook não encontrado. Verifique a URL.', 'error');
+                } else {
+                    showToast('Erro ao processar. Tente novamente.', 'error');
+                }
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Analisar Lead com IA →';
+                btnText.textContent = 'Analisar Lead com IA →';
             }
         });
     </script>
