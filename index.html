@@ -3,14 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SDR Virtual AI - Enterprise Edition</title>
+    <title>SDR Virtual AI - Enterprise Qualification</title>
     
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        console.log("📊 GTM/Analytics Ready");
-    </script>
-
     <style>
         :root {
             --primary: #1a2a6c;
@@ -18,13 +12,11 @@
             --accent: #fdbb2d;
             --success: #4caf50;
             --error: #f44336;
-            --bg: #f4f7f6;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
 
         body {
-            font-family: 'Inter', -apple-system, sans-serif;
             background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
             background-size: 400% 400%;
             animation: gradientBG 15s ease infinite;
@@ -42,150 +34,126 @@
         }
 
         .container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.98);
             border-radius: 24px;
             box-shadow: 0 25px 50px rgba(0,0,0,0.3);
             padding: 40px;
             max-width: 600px;
             width: 100%;
-            position: relative;
         }
 
         .language-picker {
-            position: absolute;
-            top: 20px;
-            right: 20px;
             display: flex;
+            justify-content: flex-end;
             gap: 10px;
+            margin-bottom: 10px;
         }
 
         .lang-btn {
-            background: white; border: 1px solid #ddd;
-            padding: 5px 10px; border-radius: 8px; cursor: pointer;
-            font-size: 12px; font-weight: bold; transition: 0.3s;
+            background: #eee; border: none; padding: 5px 10px; 
+            border-radius: 6px; cursor: pointer; font-size: 12px;
         }
 
-        .lang-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .lang-btn.active { background: var(--primary); color: white; }
 
-        h1 { color: var(--primary); font-size: 28px; text-align: center; margin-bottom: 5px; }
-        .subtitle { color: #666; font-size: 14px; text-align: center; margin-bottom: 30px; }
+        h1 { color: var(--primary); text-align: center; font-size: 26px; margin-bottom: 5px; }
+        .subtitle { color: #666; text-align: center; font-size: 14px; margin-bottom: 25px; }
 
-        /* Progress Bar */
-        .progress-container { height: 6px; background: #eee; border-radius: 3px; margin-bottom: 25px; overflow: hidden; }
-        .progress-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.4s ease; }
+        .progress-container { height: 6px; background: #eee; border-radius: 3px; margin-bottom: 25px; }
+        .progress-bar { height: 100%; width: 0%; background: var(--primary); border-radius: 3px; transition: 0.4s; }
 
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .form-group { margin-bottom: 18px; position: relative; }
-        
-        label { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: #444; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: bold; color: #444; }
         
         input, select, textarea {
-            width: 100%; padding: 12px 16px; border: 2px solid #e0e0e0;
-            border-radius: 12px; font-size: 14px; transition: 0.3s;
+            width: 100%; padding: 12px; border: 2px solid #ddd;
+            border-radius: 10px; font-size: 14px; transition: 0.3s;
         }
 
-        input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(26, 42, 108, 0.1); }
-
-        .error-msg { color: var(--error); font-size: 11px; margin-top: 4px; display: none; }
-        input.invalid { border-color: var(--error); }
+        input:focus { border-color: var(--primary); outline: none; }
 
         button {
-            width: 100%; padding: 16px; background: var(--primary); color: white;
+            width: 100%; padding: 15px; background: var(--primary); color: white;
             border: none; border-radius: 12px; font-size: 16px; font-weight: bold;
-            cursor: pointer; transition: 0.3s; margin-top: 10px;
+            cursor: pointer; transition: 0.3s;
         }
 
-        button:hover { background: #000; transform: translateY(-2px); }
-        button:disabled { background: #ccc; cursor: not-allowed; }
+        button:hover { background: #000; }
+        button:disabled { background: #ccc; }
 
-        /* Result Box */
+        /* Estilo do Relatório de Saída */
         .result-card {
             margin-top: 30px; padding: 25px; border-radius: 16px;
-            background: #fdfdfd; border: 1px solid #eee; display: none;
-            animation: fadeIn 0.5s ease;
+            background: #f9f9f9; border: 1px solid #eee; display: none;
+            border-left: 6px solid var(--primary);
         }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; float: right; text-transform: uppercase; }
-        .badge-hot { background: #ffebee; color: #c62828; }
-        .badge-warm { background: #fff3e0; color: #ef6c00; }
-        .badge-cold { background: #f5f5f5; color: #616161; }
-
-        .auto-save-tag { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.7); color: white; padding: 8px 15px; border-radius: 20px; font-size: 11px; display: none; }
+        .badge { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; float: right; }
+        .badge-hot { background: #d4edda; color: #155724; }
+        .badge-warm { background: #fff3cd; color: #856404; }
+        .badge-cold { background: #f8d7da; color: #721c24; }
     </style>
 </head>
 <body>
 
-    <div class="language-picker">
-        <button class="lang-btn active" onclick="switchLang('pt')">PT</button>
-        <button class="lang-btn" onclick="switchLang('en')">EN</button>
-    </div>
-
     <div class="container">
-        <h1 id="title">🚀 SDR Virtual AI</h1>
-        <p class="subtitle" id="subtitle">Enterprise Lead Qualification & Analytics</p>
+        <div class="language-picker">
+            <button class="lang-btn active" onclick="switchLang('pt')">PT</button>
+            <button class="lang-btn" onclick="switchLang('en')">EN</button>
+        </div>
+
+        <h1 id="t-title">🚀 SDR Virtual AI</h1>
+        <p class="subtitle" id="t-subtitle">Qualificação inteligente via Metodologia BANT</p>
 
         <div class="progress-container"><div class="progress-bar" id="progress"></div></div>
 
-        <form id="leadForm" novalidate>
+        <form id="leadForm">
             <div class="form-group">
                 <label id="l-nome">Nome Completo *</label>
-                <input type="text" id="nome" name="nome" required autocomplete="name" placeholder="João Silva">
-                <span class="error-msg" id="err-nome">Por favor, insira seu nome completo.</span>
+                <input type="text" id="nome" name="nome" required autocomplete="name">
             </div>
 
-            <div class="form-row">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div class="form-group">
                     <label id="l-email">E-mail Corporativo *</label>
-                    <input type="email" id="email" name="email" required autocomplete="email" placeholder="nome@empresa.com">
-                    <span class="error-msg" id="err-email">Use um e-mail empresarial (não Gmail/Hotmail).</span>
+                    <input type="email" id="email" name="email" required autocomplete="email">
                 </div>
                 <div class="form-group">
                     <label id="l-tel">Telefone/WhatsApp *</label>
-                    <input type="tel" id="telefone" name="telefone" required placeholder="(11) 99999-9999">
+                    <input type="tel" id="telefone" name="telefone" required autocomplete="tel" placeholder="(11) 99999-9999">
                 </div>
             </div>
 
-            <div class="form-row">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div class="form-group">
                     <label id="l-empresa">Empresa *</label>
                     <input type="text" id="empresa" name="empresa" required autocomplete="organization">
                 </div>
                 <div class="form-group">
                     <label id="l-cargo">Cargo *</label>
-                    <input type="text" id="cargo" name="cargo" required>
+                    <input type="text" id="cargo" name="cargo" required autocomplete="organization-title">
                 </div>
             </div>
 
             <div class="form-group">
-                <label id="l-tamanho">Tamanho da Organização *</label>
+                <label id="l-tamanho">Tamanho da Empresa *</label>
                 <select id="tamanho_empresa" name="tamanho_empresa" required>
                     <option value="">Selecione...</option>
                     <option value="1-10">1-10 colaboradores</option>
                     <option value="11-50">11-50 colaboradores</option>
-                    <option value="51-200">51-200 colaboradores</option>
-                    <option value="201+">Acima de 201</option>
+                    <option value="51+">Mais de 51 colaboradores</option>
                 </select>
             </div>
 
-            <div class="form-group">
-                <label id="l-msg">Desafio Principal</label>
-                <textarea id="mensagem" name="mensagem" placeholder="Descreva brevemente sua necessidade..."></textarea>
-            </div>
-
-            <button type="submit" id="btn">ANALISAR AGORA →</button>
+            <button type="submit" id="btnSubmit">ANALISAR LEAD →</button>
         </form>
 
         <div class="result-card" id="resultBox">
-            <span id="badge" class="badge"></span>
-            <h2 id="r-title" style="margin-bottom: 15px; font-size: 18px; color: var(--primary);">📊 Resultado da Análise</h2>
-            <div id="r-content" style="font-size: 14px; line-height: 1.6; color: #333;"></div>
+            <span id="badge" class="badge">FRIO</span>
+            <h2 style="font-size: 18px; color: var(--primary);">📊 Resultado da Análise</h2>
+            <div id="r-content" style="margin-top: 15px; font-size: 14px; line-height: 1.6;"></div>
         </div>
     </div>
-
-    <div class="auto-save-tag" id="saveTag">💾 Rascunho salvo localmente</div>
 
     <script>
         const WEBHOOK_URL = 'https://carolinezolet.app.n8n.cloud/webhook/sdr-virtual';
@@ -193,18 +161,18 @@
 
         // 1. Traduções
         const i18n = {
-            pt: { title: "🚀 SDR Virtual AI", btn: "ANALISAR AGORA →", loading: "IA ANALISANDO...", corporativeErr: "Use um e-mail empresarial." },
-            en: { title: "🚀 AI Virtual SDR", btn: "ANALYZE NOW →", loading: "AI THINKING...", corporativeErr: "Use a business email." }
+            pt: { title: "🚀 SDR Virtual AI", btn: "ANALISAR LEAD →", loading: "IA ANALISANDO..." },
+            en: { title: "🚀 AI Virtual SDR", btn: "ANALYZE NOW →", loading: "AI THINKING..." }
         };
 
         function switchLang(l) {
             currentLang = l;
-            document.getElementById('title').innerText = i18n[l].title;
-            document.getElementById('btn').innerText = i18n[l].btn;
+            document.getElementById('t-title').innerText = i18n[l].title;
+            document.getElementById('btnSubmit').innerText = i18n[l].btn;
             document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase() === l));
         }
 
-        // 2. Máscara de Telefone BR
+        // 2. Máscara de Telefone
         document.getElementById('telefone').addEventListener('input', e => {
             let v = e.target.value.replace(/\D/g, '');
             if (v.length > 11) v = v.slice(0, 11);
@@ -215,93 +183,72 @@
             updateProgress();
         });
 
-        // 3. Validação de E-mail Corporativo
-        function isCorporate(email) {
-            const blocked = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'live.com', 'icloud.com'];
-            const domain = email.split('@')[1];
-            return domain && !blocked.includes(domain.toLowerCase());
-        }
-
-        // 4. Barra de Progresso & Auto-Save
+        // 3. Progresso e Auto-Save
         function updateProgress() {
             const fields = ['nome', 'email', 'telefone', 'empresa', 'cargo', 'tamanho_empresa'];
-            const filled = fields.filter(id => document.getElementById(id).value.trim().length > 0).length;
+            const filled = fields.filter(id => document.getElementById(id).value.length > 2).length;
             document.getElementById('progress').style.width = (filled / fields.length * 100) + '%';
             
-            // Auto-save
             const data = {};
             fields.forEach(id => data[id] = document.getElementById(id).value);
-            localStorage.setItem('sdr_draft', JSON.stringify(data));
-            
-            const tag = document.getElementById('saveTag');
-            tag.style.display = 'block';
-            setTimeout(() => tag.style.display = 'none', 2000);
+            localStorage.setItem('lead_draft', JSON.stringify(data));
         }
 
-        document.querySelectorAll('input, select, textarea').forEach(el => el.addEventListener('change', updateProgress));
+        document.querySelectorAll('input, select').forEach(el => el.addEventListener('change', updateProgress));
 
-        // 5. Carregar Rascunho ao Iniciar
         window.onload = () => {
-            const draft = JSON.parse(localStorage.getItem('sdr_draft'));
-            if (draft) {
-                Object.keys(draft).forEach(id => {
-                    if (document.getElementById(id)) document.getElementById(id).value = draft[id];
-                });
-                updateProgress();
-            }
+            const draft = JSON.parse(localStorage.getItem('lead_draft'));
+            if(draft) Object.keys(draft).forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = draft[id] });
+            updateProgress();
         };
 
-        // 6. Envio do Formulário
+        // 4. Envio e Tratamento "Anti-Undefined"
         document.getElementById('leadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('btn');
-            const emailInput = document.getElementById('email');
-
-            // Validação final
-            if (!isCorporate(emailInput.value)) {
-                alert(i18n[currentLang].corporativeErr);
-                emailInput.classList.add('invalid');
-                return;
-            }
-
+            const btn = document.getElementById('btnSubmit');
             btn.disabled = true;
             btn.innerText = i18n[currentLang].loading;
 
-            const formData = new FormData(e.target);
-            const payload = Object.fromEntries(formData.entries());
-            payload.idioma = currentLang;
-            payload.timestamp = new Date().toISOString();
+            const data = Object.fromEntries(new FormData(e.target).entries());
+            data.idioma = currentLang;
 
             try {
                 const response = await fetch(WEBHOOK_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(data)
                 });
 
                 const result = await response.json();
-                const qual = Array.isArray(result) ? result[0] : result;
+                
+                // Trata se vier Array ou Objeto
+                let qual = Array.isArray(result) ? result[0] : result;
+                if (qual.data) qual = qual.data;
 
-                // Mostrar Resultado
+                console.log("IA Output:", qual);
+
+                // Mapeia campos com segurança (Fallback para evitar undefined)
+                const score = qual.score !== undefined ? qual.score : "N/A";
+                const analise = qual.razao_score || qual.analise_fit || "Análise concluída.";
+                const classe = (qual.classificacao || "FRIO").toUpperCase();
+
                 const resultBox = document.getElementById('resultBox');
                 const badge = document.getElementById('badge');
-                const content = document.getElementById('r-content');
-
+                
                 resultBox.style.display = 'block';
-                content.innerHTML = `
-                    <p style="font-size: 24px; font-weight: 900; color: var(--primary);">${qual.score}/100</p>
-                    <p style="margin: 15px 0;"><strong>Análise:</strong> ${qual.razao_score || qual.analise_fit}</p>
-                    <p style="color: #666; font-size: 12px;">Metodologia BANT aplicada com sucesso.</p>
+                document.getElementById('r-content').innerHTML = `
+                    <p style="font-size: 26px; font-weight: 900; color: var(--primary);">${score}/100</p>
+                    <p style="margin-top:10px;">${analise}</p>
                 `;
 
-                badge.innerText = qual.classificacao;
-                badge.className = 'badge ' + (qual.classificacao === 'QUENTE' ? 'badge-hot' : qual.classificacao === 'MORNO' ? 'badge-warm' : 'badge-cold');
+                badge.innerText = classe;
+                badge.className = 'badge ' + (classe === 'QUENTE' ? 'badge-hot' : classe === 'MORNO' ? 'badge-warm' : 'badge-cold');
 
-                localStorage.removeItem('sdr_draft');
+                localStorage.removeItem('lead_draft');
                 resultBox.scrollIntoView({ behavior: 'smooth' });
 
             } catch (err) {
-                alert("Erro ao processar. Verifique se o n8n está ONLINE e com CORS habilitado.");
+                alert("Erro de conexão com o n8n. Verifique se o workflow está ACTIVE.");
             } finally {
                 btn.disabled = false;
                 btn.innerText = i18n[currentLang].btn;
@@ -310,4 +257,3 @@
     </script>
 </body>
 </html>
-
