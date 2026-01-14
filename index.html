@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SDR Virtual AI - Qualificação de Leads</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -30,23 +26,10 @@
             width: 100%;
         }
         
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 28px;
-            text-align: center;
-        }
+        h1 { color: #333; margin-bottom: 10px; font-size: 28px; text-align: center; }
+        .subtitle { color: #666; margin-bottom: 30px; font-size: 15px; text-align: center; }
         
-        .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 15px;
-            text-align: center;
-        }
-        
-        .form-group {
-            margin-bottom: 18px;
-        }
+        .form-group { margin-bottom: 18px; }
         
         label {
             display: block;
@@ -72,10 +55,7 @@
             box-shadow: 0 0 0 3px rgba(26, 42, 108, 0.1);
         }
         
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
+        textarea { resize: vertical; min-height: 80px; }
         
         button {
             width: 100%;
@@ -97,20 +77,9 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
+        button:disabled { background: #ccc; cursor: not-allowed; }
         
-        .message {
-            display: none;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            text-align: center;
-            font-weight: 600;
-        }
-        
+        .message { display: none; padding: 15px; border-radius: 8px; margin-top: 20px; text-align: center; font-weight: 600; }
         .success-message { background: #4caf50; color: white; }
         .error-message { background: #f44336; color: white; }
 
@@ -121,86 +90,49 @@
             border-radius: 12px;
             border: 1px solid #dee2e6;
             display: none;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
         }
 
-        .qualification-result h3 {
-            margin-bottom: 15px;
-            font-size: 18px;
-            color: #1a2a6c;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 8px;
-            text-align: center;
-        }
-
-        .score-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-
-        .score-badge {
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-weight: 800;
-            font-size: 13px;
-            text-transform: uppercase;
-        }
-
+        .score-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .score-badge { padding: 8px 15px; border-radius: 20px; font-weight: 800; font-size: 13px; text-transform: uppercase; }
         .score-quente { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .score-morno { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .score-frio { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
 
-        .detail-item {
-            margin: 15px 0;
-            font-size: 14px;
-            line-height: 1.6;
-            color: #444;
-        }
-
-        .detail-item strong {
-            color: #333;
-            display: block;
-            margin-bottom: 5px;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
+        .detail-item { margin: 15px 0; font-size: 14px; line-height: 1.6; }
+        .detail-item strong { color: #333; display: block; margin-bottom: 5px; font-size: 12px; text-transform: uppercase; }
         .required { color: #f44336; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🚀 SDR Virtual AI</h1>
-        <p class="subtitle">Análise BANT inteligente em tempo real</p>
+        <p class="subtitle">Qualificação inteligente com acessibilidade digital</p>
         
         <form id="leadForm">
             <div class="form-group">
-                <label>Nome Completo <span class="required">*</span></label>
-                <input type="text" name="nome" required placeholder="Ex: Maria Souza">
+                <label for="nome">Nome Completo <span class="required" aria-hidden="true">*</span></label>
+                <input type="text" id="nome" name="nome" required placeholder="Ex: Maria Souza" aria-required="true">
             </div>
             
             <div class="form-group">
-                <label>Email Corporativo <span class="required">*</span></label>
-                <input type="email" name="email" required placeholder="maria@empresa.com">
+                <label for="email">Email Corporativo <span class="required" aria-hidden="true">*</span></label>
+                <input type="email" id="email" name="email" required placeholder="maria@empresa.com" aria-required="true">
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div class="form-group">
-                    <label>Empresa <span class="required">*</span></label>
-                    <input type="text" name="empresa" required placeholder="Nome da empresa">
+                    <label for="empresa">Empresa <span class="required" aria-hidden="true">*</span></label>
+                    <input type="text" id="empresa" name="empresa" required placeholder="Nome da empresa" aria-required="true">
                 </div>
                 <div class="form-group">
-                    <label>Cargo <span class="required">*</span></label>
-                    <input type="text" name="cargo" required placeholder="Ex: Diretora">
+                    <label for="cargo">Cargo <span class="required" aria-hidden="true">*</span></label>
+                    <input type="text" id="cargo" name="cargo" required placeholder="Ex: Diretora" aria-required="true">
                 </div>
             </div>
             
             <div class="form-group">
-                <label>Tamanho da Empresa <span class="required">*</span></label>
-                <select name="tamanho_empresa" required>
+                <label for="tamanho_empresa">Tamanho da Empresa <span class="required" aria-hidden="true">*</span></label>
+                <select id="tamanho_empresa" name="tamanho_empresa" required aria-label="Selecione o número de funcionários da empresa" aria-required="true">
                     <option value="">Selecione...</option>
                     <option value="1-10">1-10 funcionários</option>
                     <option value="11-50">11-50 funcionários</option>
@@ -209,28 +141,43 @@
                     <option value="500+">Mais de 500 funcionários</option>
                 </select>
             </div>
-            
+
             <div class="form-group">
-                <label>Desafio de Marketing</label>
-                <textarea name="mensagem" placeholder="Como podemos ajudar o seu negócio hoje?"></textarea>
+                <label for="segmento">Segmento <span class="required" aria-hidden="true">*</span></label>
+                <select id="segmento" name="segmento" required aria-label="Selecione o segmento de atuação da empresa" aria-required="true">
+                    <option value="">Selecione...</option>
+                    <option value="Tecnologia">Tecnologia</option>
+                    <option value="E-commerce">E-commerce</option>
+                    <option value="Saúde">Saúde</option>
+                    <option value="Educação">Educação</option>
+                    <option value="Financeiro">Financeiro</option>
+                    <option value="Varejo">Varejo</option>
+                    <option value="Serviços">Serviços</option>
+                    <option value="Indústria">Indústria</option>
+                    <option value="Outro">Outro</option>
+                </select>
             </div>
             
-            <input type="hidden" name="origem_lead" value="Portfolio_Demo">
+            <div class="form-group">
+                <label for="mensagem">Desafio de Marketing</label>
+                <textarea id="mensagem" name="mensagem" placeholder="Como podemos ajudar o seu negócio hoje?" aria-label="Descreva seu desafio de marketing"></textarea>
+            </div>
+            
+            <input type="hidden" name="origem_lead" value="Demo_Acessivel">
 
             <button type="submit" id="submitBtn">Analisar Lead com IA →</button>
             
-            <div class="message success-message" id="successMsg">✅ Processado com sucesso!</div>
-            <div class="message error-message" id="errorMsg">❌ Erro na conexão. Verifique o workflow.</div>
+            <div class="message success-message" id="successMsg" role="alert">✅ Processado com sucesso!</div>
+            <div class="message error-message" id="errorMsg" role="alert">❌ Erro na conexão. Verifique o workflow.</div>
 
-            <div class="qualification-result" id="qualificationResult">
-                <h3>📊 Diagnóstico de Qualificação AI</h3>
+            <div class="qualification-result" id="qualificationResult" aria-live="polite">
+                <h2 style="font-size: 18px; margin-bottom: 15px; color: #1a2a6c; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 8px;">📊 Relatório de Qualificação AI</h2>
                 <div id="qualificationContent"></div>
             </div>
         </form>
     </div>
     
     <script>
-        // --- SUBSTITUA PELA SUA URL DE PRODUÇÃO DO N8N ---
         const WEBHOOK_URL = 'https://carolinezolet.app.n8n.cloud/webhook/sdr-virtual';
         
         document.getElementById('leadForm').addEventListener('submit', async (e) => {
@@ -266,7 +213,6 @@
                     
                     successMsg.style.display = 'block';
 
-                    // Função auxiliar para limpar listas enviadas como texto pelo n8n
                     const parseList = (field) => {
                         if (Array.isArray(field)) return field;
                         try { return JSON.parse(field); } 
@@ -285,18 +231,15 @@
                             <span style="font-size: 26px; font-weight: 900; color: #1a2a6c;">${qual.score}/100</span>
                             <span class="score-badge ${badgeClass}">${qual.classificacao}</span>
                         </div>
-                        
                         <div class="detail-item">
                             <strong>Razão do Score</strong>
                             ${qual.razao_score || qual.analise_fit || 'Análise concluída.'}
                         </div>
-
                         ${flags.length > 0 && flags[0] !== "" ? `
                         <div class="detail-item" style="color: #b21f1f; background: #fff5f5; padding: 10px; border-radius: 8px;">
                             <strong>⚠️ Pontos de Atenção (Red Flags)</strong>
                             • ${flags.join('<br>• ')}
                         </div>` : ''}
-
                         ${passos.length > 0 && passos[0] !== "" ? `
                         <div class="detail-item">
                             <strong>🎯 Próximos Passos Sugeridos</strong>
@@ -306,10 +249,7 @@
                     
                     qualificationResult.style.display = 'block';
                     e.target.reset();
-                    qualificationResult.scrollIntoView({ behavior: 'smooth' });
-                } else {
-                    throw new Error();
-                }
+                } else { throw new Error(); }
             } catch (error) {
                 errorMsg.style.display = 'block';
             } finally {
